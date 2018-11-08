@@ -1,0 +1,13 @@
+El ascensor sube y baja, parandose un tiempo en cada planta y avisando al edificio de los
+cambios de planta.
+Una persona llama al ascensor y espera a que llegue.
+El edificio recibe la notificacion. Cuando un ascensor llegue a la planta, se para.
+Si hay hueco, la persona sube y si no, espera al siguiente (sigue como demandante).
+Cuando la persona sube, indica a que planta va al edificio, cuando el eficio vea que
+esa es su planta, le avisa y se baja.
+La persona continua con su trabajo.
+
+El ascensor notifica en que planta está, cuando empieza y cada vez que cambia de planta
+Cuando es notificado, el edificio verifica si alguien se tiene que bajar y si alguien se tiene que subir
+Cuando la persona llama al ascensor, el edificio la detiene hasta que llega un ascensor a esa planta
+y la reanuda si el ascensor que ha llegado está libre, si no, la mantiene ahi.
