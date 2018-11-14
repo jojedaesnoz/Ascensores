@@ -17,12 +17,9 @@ public class Persona extends Thread {
         salidaAscensor = new Semaphore(0);
         llamadaAscensor = new Semaphore(0);
         autoincrement++;
-        setName("[" + "Persona " + autoincrement + "]");
+        setName(String.valueOf(autoincrement));
 
         generarPlantasOrigenDestino();
-        System.out.println(getName() + " Origen:" + origen + " Destino:" + destino);
-
-        edificio.apuntarPersona(this);
     }
     
     @Override
@@ -69,6 +66,6 @@ public class Persona extends Thread {
 
     @Override
     public String toString() {
-        return getName();
+        return String.format("[Persona %02d]   Desde  %02d  hacia  %02d", Integer.parseInt(getName()), origen, destino);
     }
 }

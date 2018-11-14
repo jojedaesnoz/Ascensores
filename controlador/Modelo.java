@@ -3,10 +3,7 @@ package com.company.controlador;
 import com.company.hilos.Ascensor;
 import com.company.hilos.Persona;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.Semaphore;
 
 
@@ -48,6 +45,7 @@ public class Modelo {
     public void nuevaPersonaEsperando(Persona persona) {
         if (!personasEsperando.contains(persona)) {
             personasEsperando.add(persona);
+            personasEsperando.sort(Comparator.comparingInt(Persona::getOrigen));
         }
     }
 
@@ -58,4 +56,6 @@ public class Modelo {
     public void quitarPersonaEsperando(Persona persona) {
         personasEsperando.remove(persona);
     }
+
+
 }

@@ -7,7 +7,7 @@ public class Main {
 
     public static void main(String[] args) {
         // Crear el edificio
-        Edificio edificio = new Edificio(10, 3, 4);
+        Edificio edificio = new Edificio(10, 2, 4);
 
         // Crear a las personas
         Persona[] personas = new Persona[30];

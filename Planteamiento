@@ -11,3 +11,7 @@ El ascensor notifica en que planta está, cuando empieza y cada vez que cambia d
 Cuando es notificado, el edificio verifica si alguien se tiene que bajar y si alguien se tiene que subir
 Cuando la persona llama al ascensor, el edificio la detiene hasta que llega un ascensor a esa planta
 y la reanuda si el ascensor que ha llegado está libre, si no, la mantiene ahi.
+
+Mejoras:
+Que los ascensores decidan aletoriamente si comienzan subiendo o bajando
+Que sean movimientos eficientes

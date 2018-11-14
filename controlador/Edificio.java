@@ -6,12 +6,13 @@ import com.company.hilos.Persona;
 
 import javax.swing.*;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.concurrent.Semaphore;
 
 
 public class Edificio {
 
-    private Semaphore permisoModelo, permisoVista;
+    private Semaphore permisoModelo;
     private Modelo modelo;
     private int numPlantas;
     private Vista vista;
@@ -22,22 +23,15 @@ public class Edificio {
         modelo = new Modelo();
         crearAscensores(numAscensores, tamAscensores);
         permisoModelo = new Semaphore(1); // MUTEX
-        permisoVista = new Semaphore(1);
         vista = new Vista(numAscensores);
     }
 
     public void llamarAscensor(Persona persona) throws InterruptedException{
 
         // La persona espera a que haya ascensores disponibles en su planta
-        persona.getLlamadaAscensor().acquire();
-        Ascensor ascensor;
-        while ((ascensor = buscarAscensor(persona.getOrigen())) == null) {
-            persona.getLlamadaAscensor().acquire();
-        }
-
-        // Pasa al ascensor y se visualiza
+        ponerEnEspera(persona);
+        Ascensor ascensor = buscarAscensor(persona);
         ascensor.getPase().acquire();
-        System.out.println(persona.getName() + " Subiendo a " + ascensor.getName());
 
         // Actualizar modelo
         permisoModelo.acquire();
@@ -46,53 +40,15 @@ public class Edificio {
         permisoModelo.release();
 
         // Actualizar ui
-        permisoVista.acquire();
         ponerPersonaAscensor(ascensor, persona);
-        permisoVista.release();
-
-    }
-
-    private void avisarSubidas(Ascensor ascensor) {
-
-        // Si el ascensor esta libre, notifica a las personas cuya planta coincida con la suya
-        if (ascensor.getPase().availablePermits() > 0) {
-            for (Persona persona: modelo.getPersonasEsperando()) {
-                if (persona.getOrigen() == ascensor.getPlanta()) {
-                    persona.getLlamadaAscensor().release();
-                }
-            }
-        }
-
-    }
-
-    private void avisarBajadas(Ascensor ascensorActual) throws InterruptedException{
-
-        ArrayList<Persona> aux = new ArrayList<>();
-
-        // Revisar que personas han llegado ya a su destino
-        for (Persona persona: modelo.getPersonasEnAscensor(ascensorActual)) {
-            if (persona.getDestino() == ascensorActual.getPlanta()) {
-                aux.add(persona);
-            }
-        }
-
-        // Procesar las salidas
-        for (Persona persona: aux) {
-            modelo.borrarPersonaDeAscensor(ascensorActual, persona);
-            System.out.println(persona.getName() + " Bajando de " + ascensorActual.getName());
-            persona.getSalidaAscensor().release();
-            ascensorActual.getPase().release();
-
-            permisoVista.acquire();
-            bajarPersonaAscensor(ascensorActual, persona);
-            permisoVista.release();
-        }
-
     }
 
     public void avisarCambioDePlanta(Ascensor ascensor) {
         try {
-            // Solicitamos permiso para operar con el modelo antes de hacer nada
+            // Mostrar visualmente el cambio de planta
+            cambiarDePlanta(ascensor);
+
+            // Operar con el modelo de forma segura
             permisoModelo.acquire();
 
             avisarBajadas(ascensor);
@@ -104,52 +60,99 @@ public class Edificio {
         }
     }
 
-    private Ascensor buscarAscensor(int planta) {
-        // Recorre la lista, si hay algun ascensor con huecos en esa planta
-        for (Ascensor ascensor : modelo.getAscensores()) {
-            if (ascensor.getPase().availablePermits() > 0 && ascensor.getPlanta() == planta) {
-                return ascensor;
+    private void avisarSubidas(Ascensor ascensor) {
+        // Si el ascensor esta libre, notifica a las personas cuya planta coincida con la suya
+        if (ascensor.getPase().availablePermits() > 0) {
+            for (Persona persona: modelo.getPersonasEsperando()) {
+                if (persona.getOrigen() == ascensor.getPlantaActual()) {
+                    persona.getLlamadaAscensor().release();
+                }
             }
         }
-        return null;
     }
 
-    private void crearAscensores(int numAscensores, int tamAscensores) {
-        // Rellenar el ArrayList y preparar el mapa
-        for (int i = 0; i < numAscensores; i++) {
-            Ascensor ascensor = new Ascensor(this, tamAscensores);
-            modelo.nuevoAscensor(ascensor);
+    private void avisarBajadas(Ascensor ascensorActual) {
+        ArrayList<Persona> aux = new ArrayList<>();
+
+        // Revisar que personas han llegado ya a su destino
+        for (Persona persona: modelo.getPersonasEnAscensor(ascensorActual)) {
+            if (persona.getDestino() == ascensorActual.getPlantaActual()) {
+                aux.add(persona);
+            }
+        }
+
+        // Procesar las salidas
+        for (Persona persona: aux) {
+            modelo.borrarPersonaDeAscensor(ascensorActual, persona);
+            persona.getSalidaAscensor().release();
+            ascensorActual.getPase().release();
+
+            bajarPersonaAscensor(ascensorActual, persona);
         }
     }
 
-    public int getNumPlantas() {
-        return numPlantas;
+    private Ascensor buscarAscensor(Persona persona) throws InterruptedException {
+        Ascensor ascensor;
+        do {
+            persona.getLlamadaAscensor().acquire();
+        } while (null == (ascensor = ascensorEnPlanta(persona.getOrigen())));
+//
+//        // Recorre la lista, si hay algun ascensor con huecos en esa planta
+//        ArrayList<Ascensor> ascensoresLibres = new ArrayList<>();
+//        for (Ascensor ascensor : modelo.getAscensores()) {
+//            if (ascensor.getPase().availablePermits() > 0 && ascensor.getPlantaActual() == planta) {
+//                ascensoresLibres.add(ascensor);
+//            }
+//        }
+
+//        // Devuelve null si no ha encontrado ninguno o el que tenga mas plazas disponibles
+//        if (ascensoresLibres.isEmpty()) {
+//            return null;
+//        } else {
+//            ascensoresLibres.sort(Comparator.comparingInt((Ascensor a) -> a.getPase().availablePermits()));
+//            return ascensoresLibres.get(0);
+//        }
+
+
+        return ascensor;
     }
 
-    public void comienzoJornada() {
-        for (Ascensor ascensor: modelo.getAscensores()) {
-            ascensor.start();
-        }
-    }
-
-    public void finDeJornada() {
+    private Ascensor ascensorEnPlanta(int planta) {
+        // Recorre la lista, si hay algun ascensor con huecos en esa planta
+        ArrayList<Ascensor> ascensoresLibres = new ArrayList<>();
         for (Ascensor ascensor : modelo.getAscensores()) {
-            ascensor.detenerAscensor();
+            if (ascensor.getPase().availablePermits() > 0 && ascensor.getPlantaActual() == planta) {
+                ascensoresLibres.add(ascensor);
+            }
         }
 
-        vista.dispose();
+        // Devuelve null si no ha encontrado ninguno o el que tenga mas plazas disponibles
+        if (ascensoresLibres.isEmpty()) {
+            return null;
+        } else {
+            ascensoresLibres.sort(Comparator.comparingInt((Ascensor a) -> a.getPase().availablePermits()));
+            return ascensoresLibres.get(0);
+        }
     }
 
-    public void apuntarPersona(Persona persona) {
+    private void ponerEnEspera(Persona persona) throws InterruptedException {
+        permisoModelo.acquire();
         modelo.nuevaPersonaEsperando(persona);
+        refrescarPersonasEsperando();
+        permisoModelo.release();
 
-        try {
-            permisoVista.acquire();
-            vista.getModeloEsperando().addElement(persona);
-            permisoVista.release();
-        } catch (InterruptedException ie) {
-            ie.printStackTrace();
-        }
+
+    }
+
+
+    private void cambiarDePlanta(Ascensor ascensor) {
+        int idAscensor = Integer.parseInt(ascensor.getName());
+        int numPlanta = ascensor.getPlantaActual();
+        String direccion = ascensor.isSubiendo() ? "Subiendo" : "Bajando";
+//        String texto = String.format("Ascensor %d    Planta  %d  %s", idAscensor, numPlanta, direccion);
+        String texto = String.format("%d    %s", numPlanta, direccion);
+
+        SwingUtilities.invokeLater(() -> vista.getPlantasAscensores().get(idAscensor).setText(texto));
     }
 
 
@@ -167,7 +170,30 @@ public class Edificio {
         });
     }
 
-    private void borrarPersonaEsperando(Persona persona) {
-        vista.getModeloEsperando().removeElement(persona);
+    private void refrescarPersonasEsperando() {
+        SwingUtilities.invokeLater(() -> {
+            vista.getModeloEsperando().clear();
+            modelo.getPersonasEsperando().forEach(vista.getModeloEsperando()::addElement);
+        });
+    }
+    public void comienzoJornada() {
+        modelo.getAscensores().forEach(Ascensor::start);
+    }
+
+    public void finDeJornada() {
+        modelo.getAscensores().forEach(Ascensor::detenerAscensor);
+        vista.dispose();
+    }
+
+    private void crearAscensores(int numAscensores, int tamAscensores) {
+        // Rellenar el ArrayList y preparar el mapa
+        for (int i = 0; i < numAscensores; i++) {
+            Ascensor ascensor = new Ascensor(this, tamAscensores);
+            modelo.nuevoAscensor(ascensor);
+        }
+    }
+
+    public int getNumPlantas() {
+        return numPlantas;
     }
 }
