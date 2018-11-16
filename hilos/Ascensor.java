@@ -13,12 +13,13 @@ public class Ascensor extends Thread {
     private Edificio edificio;
     private boolean operativo, subiendo;
     private Semaphore pase;
-    private int planta;
+    private int numPlantas, planta;
     private static int autoincrement;
 
-    public Ascensor (Edificio edificio, int tamAscensor) {
+    public Ascensor (Edificio edificio, int tamAscensor, int numPlantas) {
         this.edificio = edificio;
         pase = new Semaphore(tamAscensor);
+        this.numPlantas = numPlantas;
         planta = (int)(Math.random() * (tamAscensor + 1));
         operativo = false;
 
@@ -41,7 +42,7 @@ public class Ascensor extends Thread {
                 //TODO: que solo se pare si se va a bajar o subir
 
                 // Si ha llegado al final del recorrido, da la vuelta
-                if (planta >= edificio.getNumPlantas()) subiendo = false;
+                if (planta >= numPlantas) subiendo = false;
                 else if (planta <= 0) subiendo = true;
 
                 // Se mueve

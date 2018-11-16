@@ -20,13 +20,11 @@ public class Edificio {
 
     // VARIABLES Y ATRIBUTOS
     private Semaphore permisoDatos;
-    private int numPlantas;
     private Vista vista;
 
     public Edificio(int numPlantas, int numAscensores, int tamAscensores) {
 
         // INICIALIZACION
-        this.numPlantas = numPlantas;
         ascensores = new ArrayList<>();
         personasAscensor = new HashMap<>();
         personasEsperando = new HashMap<>();
@@ -38,16 +36,25 @@ public class Edificio {
 
         // CREAR ASCENSORES
         for (int i = 0; i < numAscensores; i++) {
-            Ascensor ascensor = new Ascensor(this, tamAscensores);
+            Ascensor ascensor = new Ascensor(this, tamAscensores, numPlantas);
             ascensores.add(ascensor);
             personasAscensor.put(ascensor, new ArrayList<>());
         }
     }
 
+    /*
+     *****************************************
+     *                                       *
+     *   METODOS DE LOS HILOS PERSONA:       *
+     *       llamarAscensor                  *
+     *       buscarAscensor                  *
+     *                                       *
+     *****************************************
+     */
     public void llamarAscensor(Persona persona) throws InterruptedException{
 
         // La persona espera y consigue un ascensor libre en su planta
-        ponerEnEspera(persona);
+        ponerPersonaEsperando(persona);
         Ascensor ascensor = buscarAscensor(persona);
         ascensor.getPase().acquire();
 
@@ -62,6 +69,42 @@ public class Edificio {
         refrescarGenteEsperando(ascensor.getPlanta());
     }
 
+    private Ascensor buscarAscensor(Persona persona) throws InterruptedException {
+        ArrayList<Ascensor> ascensoresLibres = new ArrayList<>();
+        Ascensor ascensorLibre = null;
+
+        do {
+            // Hace que la persona espere hasta que se libere algun ascensor
+            persona.getLlamadaAscensor().acquire();
+
+            // Busca posibles candidatos
+            for (Ascensor ascensor: ascensores) {
+                if (ascensor.getPase().availablePermits() > 0 && ascensor.getPlanta() == persona.getOrigen()) {
+                    ascensoresLibres.add(ascensor);
+                }
+            }
+
+            // Si ha encontrado candidatos, devuelve el que tenga mas permisos libres
+            if (!ascensoresLibres.isEmpty()) {
+                ascensoresLibres.sort(Comparator.comparingInt(
+                        (Ascensor a) -> a.getPase().availablePermits()).reversed());
+                ascensorLibre = ascensoresLibres.get(0);
+            }
+        } while (ascensorLibre == null);
+
+        return ascensorLibre;
+    }
+
+    /*
+    *****************************************
+    *                                       *
+    *   METODOS DE LOS HILOS ASCENSOR:      *
+    *       avisarCambioDePlanta            *
+    *       avisarSubidas                   *
+    *       avisarBajadas                   *
+    *                                       *
+    *****************************************
+     */
     public void avisarCambioDePlanta(Ascensor ascensor) {
         try {
             permisoDatos.acquire();
@@ -106,33 +149,19 @@ public class Edificio {
         }
     }
 
-    private Ascensor buscarAscensor(Persona persona) throws InterruptedException {
-        ArrayList<Ascensor> ascensoresLibres = new ArrayList<>();
-        Ascensor ascensorLibre = null;
-
-        do {
-            // Hace que la persona espere hasta que se libere algun ascensor
-            persona.getLlamadaAscensor().acquire();
-
-            // Busca posibles candidatos
-            for (Ascensor ascensor: ascensores) {
-                if (ascensor.getPase().availablePermits() > 0 && ascensor.getPlanta() == persona.getOrigen()) {
-                    ascensoresLibres.add(ascensor);
-                }
-            }
-
-            // Si ha encontrado candidatos, devuelve el que tenga mas permisos libres
-            if (!ascensoresLibres.isEmpty()) {
-                ascensoresLibres.sort(Comparator.comparingInt(
-                        (Ascensor a) -> a.getPase().availablePermits()).reversed());
-                ascensorLibre = ascensoresLibres.get(0);
-            }
-        } while (ascensorLibre == null);
-
-        return ascensorLibre;
-    }
-
-    private void ponerEnEspera(Persona persona) throws InterruptedException {
+    /*
+     *****************************************
+     *                                       *
+     *   METODOS DE LA VISTA:                *
+     *       ponerPersonaEsperando           *
+     *       cambiarDePlanta                 *
+     *       subirAlAscensor                 *
+     *       bajarDelAscensor                *
+     *       refrescarGenteEsperando         *
+     *                                       *
+     *****************************************
+     */
+    private void ponerPersonaEsperando(Persona persona) throws InterruptedException {
         permisoDatos.acquire();
 
         personasEsperando.get(persona.getOrigen()).add(persona);
@@ -142,7 +171,6 @@ public class Edificio {
 
         permisoDatos.release();
     }
-
 
     private void cambiarDePlanta(Ascensor ascensor) {
         SwingUtilities.invokeLater(() ->
@@ -159,15 +187,6 @@ public class Edificio {
         });
     }
 
-    private void refrescarGenteEsperando(int planta) {
-        SwingUtilities.invokeLater(() -> {
-            vista.modelosEsperando.get(planta).removeAllElements();
-            for (Persona persona: personasEsperando.get(planta)) {
-                vista.modelosEsperando.get(planta).addElement(persona);
-            }
-        });
-    }
-
     private void bajarDelAscensor(Ascensor ascensor, Persona persona) {
         SwingUtilities.invokeLater(() -> {
             vista.modelosAscensores.get(ascensor.getIdAscensor()).removeElement(persona);
@@ -177,6 +196,23 @@ public class Edificio {
         });
     }
 
+    private void refrescarGenteEsperando(int planta) {
+        SwingUtilities.invokeLater(() -> {
+            vista.modelosEsperando.get(planta).removeAllElements();
+            for (Persona persona: personasEsperando.get(planta)) {
+                vista.modelosEsperando.get(planta).addElement(persona);
+            }
+        });
+    }
+
+    /*
+     *****************************************
+     *                                       *
+     *   METODOS DEL PROCESO:                *
+     *       comienzoJornada                 *
+     *       finDeJornada                    *
+     *****************************************
+     */
     public void comienzoJornada() {
         for (Ascensor ascensor : ascensores) {
             ascensor.start();
@@ -188,9 +224,5 @@ public class Edificio {
             ascensor.detenerAscensor();
         }
         vista.dispose();
-    }
-
-    public int getNumPlantas() {
-        return numPlantas;
     }
 }
