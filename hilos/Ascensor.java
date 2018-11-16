@@ -3,7 +3,6 @@ package com.company.hilos;
 
 import com.company.controlador.Edificio;
 
-import java.util.ArrayList;
 import java.util.Random;
 import java.util.concurrent.Semaphore;
 
@@ -11,28 +10,17 @@ import java.util.concurrent.Semaphore;
  * Created by Javi on 27/10/2018.
  */
 public class Ascensor extends Thread {
-    enum ESTADOS {
-        SUBIENDO, BAJANDO, QUIETO
-    }
     private Edificio edificio;
     private boolean operativo, subiendo;
     private Semaphore pase;
-    private int plantaActual;
+    private int planta;
     private static int autoincrement;
-    private ESTADOS estado;
-    private ArrayList<Integer> plantasDestino;
-
-
-    private final int TIEMPO_BASE = 200;
-    private final int TIEMPO_PARADA = 1000;
 
     public Ascensor (Edificio edificio, int tamAscensor) {
         this.edificio = edificio;
         pase = new Semaphore(tamAscensor);
-        plantaActual = (int)(Math.random() * (tamAscensor + 1));
+        planta = (int)(Math.random() * (tamAscensor + 1));
         operativo = false;
-
-        plantasDestino = new ArrayList<>();
 
         setName(String.valueOf(autoincrement));
         autoincrement++;
@@ -53,12 +41,12 @@ public class Ascensor extends Thread {
                 //TODO: que solo se pare si se va a bajar o subir
 
                 // Si ha llegado al final del recorrido, da la vuelta
-                if (plantaActual >= edificio.getNumPlantas()) subiendo = false;
-                else if (plantaActual <= 0) subiendo = true;
+                if (planta >= edificio.getNumPlantas()) subiendo = false;
+                else if (planta <= 0) subiendo = true;
 
                 // Se mueve
-                if (subiendo) plantaActual++;
-                else plantaActual--;
+                if (subiendo) planta++;
+                else planta--;
 
             } while (operativo);
         } catch (InterruptedException e) {
@@ -80,15 +68,12 @@ public class Ascensor extends Thread {
         return pase;
     }
 
-    public int getPlantaActual() {
-        return plantaActual;
+    public int getPlanta() {
+        return planta;
     }
 
-    public ArrayList<Integer> getPlantasDestino() {
-        return plantasDestino;
-    }
 
-    public ESTADOS getEstado() {
-        return estado;
+    public int getIdAscensor() {
+        return Integer.parseInt(getName());
     }
 }

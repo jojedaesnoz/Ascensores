@@ -66,6 +66,8 @@ public class Persona extends Thread {
 
     @Override
     public String toString() {
-        return String.format("[Persona %02d]   Desde  %02d  hacia  %02d", Integer.parseInt(getName()), origen, destino);
+//        return String.format("[Persona %02d]   Desde  %02d  hacia  %02d", Integer.parseInt(getName()), origen, destino);
+        return "Persona " + getName() + " Destino: " + destino;
+//        return "Persona " + getName();
     }
 }

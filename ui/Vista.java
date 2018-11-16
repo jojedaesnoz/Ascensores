@@ -8,103 +8,108 @@ import java.util.ArrayList;
 
 public class Vista extends JFrame {
 
-    private DefaultListModel<Persona> modeloEsperando, modeloBajadas;
-    private JList<Persona> listaEsperando, listaBajadas;
-    private ArrayList<DefaultListModel<Persona>> modelosAscensores;
-    private ArrayList<JList<Persona>> listasAscensores;
-    private ArrayList<JLabel> plantasAscensores;
+    private int numPlantas;
+    private int numAscensores;
+    private GridBagConstraints gbc;
 
-    public Vista(int numAscensores) {
-        prepararVentana();
+    public ArrayList<DefaultListModel<Persona>> modelosEsperando, modelosBajadas, modelosAscensores;
+    public ArrayList<JList<Persona>> listasEsperando, listasBajadas, listasAscensores;
+    public ArrayList<JScrollPane> panelesAscensores;
 
-        add(listaEsperando());
-        add(panelAscensores(numAscensores));
-        add(crearListaBajadas());
+    public Vista(int numPlantas, int numAscensores) {
+        this.numPlantas = numPlantas;
+        this.numAscensores = numAscensores;
 
-        pack();
+        setLayout(new GridBagLayout());
+        gbc = new GridBagConstraints();
+
+        crearComponentes();
+        colocarPlantas();
+
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setSize((numAscensores + 2) * 200, numPlantas * 100);
         setVisible(true);
     }
 
-
-    private void prepararVentana() {
-        setLayout(new GridLayout(1, 2));
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
-    }
-
-    private JPanel crearListaBajadas() {
-        JPanel panel = new JPanel(new BorderLayout());
-
-        modeloBajadas = new DefaultListModel<>();
-        listaBajadas = new JList<>(modeloBajadas);
-
-        panel.add(new JScrollPane(listaBajadas), BorderLayout.CENTER);
-        panel.add(new JLabel("Personas que se han bajado"), BorderLayout.NORTH);
-        return panel;
-    }
-
-    private JPanel panelAscensores(int numAscensores) {
-        modelosAscensores = new ArrayList<>();
+    private void crearComponentes() {
+        listasEsperando = new ArrayList<>();
+        listasBajadas = new ArrayList<>();
         listasAscensores = new ArrayList<>();
-        plantasAscensores = new ArrayList<>();
+        modelosEsperando = new ArrayList<>();
+        modelosBajadas = new ArrayList<>();
+        modelosAscensores = new ArrayList<>();
+        panelesAscensores = new ArrayList<>();
+    }
 
-        // Crear panel
-        JPanel contenedor = new JPanel();
-        BoxLayout vBox = new BoxLayout(contenedor, BoxLayout.Y_AXIS);
-        contenedor.setLayout(vBox);
+    private void colocarPlantas() {
+        Dimension tamPlanta = new Dimension();
 
-        // Crear ascensores
-        for (int i = 0; i < numAscensores; i++) {
-            JPanel ascensor = new JPanel(new BorderLayout());
-            JPanel titulo = new JPanel(new GridLayout(1, 2));
-
-            modelosAscensores.add(new DefaultListModel<>());
-            listasAscensores.add(new JList<>(modelosAscensores.get(i)));
-
-            plantasAscensores.add(new JLabel(String.valueOf((i+1))));
-            titulo.add(new JLabel("Ascensor " + (i + 1) + " planta: "));
-            titulo.add(plantasAscensores.get(i));
-
-            ascensor.add(titulo, BorderLayout.NORTH);
-            ascensor.add(new JScrollPane(listasAscensores.get(i)), BorderLayout.CENTER);
-
-            contenedor.add(ascensor);
+        // ETIQUETAS
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        for (int i = 0; i <= numPlantas; i++) {
+            JLabel labelPlanta = new JLabel("Planta " + i, SwingConstants.CENTER);
+            add(labelPlanta, gbc);
+            gbc.gridy++;
         }
 
-        return contenedor;
+        // GENTE ESPERANDO
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.fill = GridBagConstraints.BOTH;
+        for (int i = 0; i <= numPlantas; i++) {
+            DefaultListModel<Persona> modelo = new DefaultListModel<>();
+            JList<Persona> lista = new JList<>(modelo);
+            JScrollPane panel = new JScrollPane(lista);
+
+            modelosEsperando.add(modelo);
+            listasEsperando.add(lista);
+            add(panel, gbc);
+            gbc.gridy++;
+        }
+
+        // GENTE QUE SE BAJA
+        gbc.gridx = numAscensores + 2;
+        gbc.gridy = 0;
+        for (int i = 0; i <= numPlantas; i++) {
+            DefaultListModel<Persona> modelo = new DefaultListModel<>();
+            JList<Persona> lista = new JList<>(modelo);
+            JScrollPane panel = new JScrollPane(lista);
+
+            modelosBajadas.add(modelo);
+            listasBajadas.add(lista);
+            add(panel, gbc);
+            gbc.gridy++;
+        }
+        gbc.weighty = 0;
+
+        // ASCENSORES
+        gbc.gridx = 2;
+        gbc.gridy = 0;
+        for (int i = 0; i < numAscensores; i++) {
+            DefaultListModel<Persona> modelo = new DefaultListModel<>();
+            JList<Persona> lista = new JList<>(modelo);
+            JScrollPane panel = new JScrollPane(lista);
+
+            modelosAscensores.add(modelo);
+            listasAscensores.add(lista);
+            panelesAscensores.add(panel);
+
+            add(panel, gbc);
+            gbc.gridx++;
+        }
     }
 
-    private JPanel listaEsperando(){
-        JPanel panel = new JPanel(new BorderLayout());
-        modeloEsperando = new DefaultListModel<>();
-        listaEsperando = new JList<>(modeloEsperando);
+    public void colocarAscensor(int id, int planta) {
+        gbc.gridx = 2 + id;
+        gbc.gridy = planta;
 
-        panel.add(new JScrollPane(listaEsperando), BorderLayout.CENTER);
-        panel.add(new JLabel("Personas esperando"), BorderLayout.NORTH);
-        return panel;
-    }
+        add(panelesAscensores.get(id), gbc);
 
-    public ArrayList<JLabel> getPlantasAscensores() {
-        return plantasAscensores;
-    }
-
-    public DefaultListModel<Persona> getModeloBajadas() {
-        return modeloBajadas;
-    }
-
-    public DefaultListModel<Persona> getModeloEsperando() {
-        return modeloEsperando;
-    }
-
-    public JList<Persona> getListaEsperando() {
-        return listaEsperando;
-    }
-
-    public JList<Persona> getListaAscensor(int id) {
-        return listasAscensores.get(id);
-    }
-
-    public DefaultListModel<Persona> getModeloAscensor(int id) {
-        return modelosAscensores.get(id);
+        revalidate();
+        repaint();
     }
 }

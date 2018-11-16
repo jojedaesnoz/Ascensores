@@ -16,10 +16,10 @@ public class Main {
         }
 
         // Arrancar
+        edificio.comienzoJornada();
         for (Persona persona : personas) {
             persona.start();
         }
-        edificio.comienzoJornada();
 
         // Esperar a que acabe
         try {

@@ -1,15 +1,14 @@
 package com.company;
 
-import java.util.ArrayList;
-import java.util.Arrays;
+import com.company.ui.Vista;
 
 public class Prueba {
 
-    public static void main (String[] args) {
-        ArrayList<Integer> nums = new ArrayList<>(Arrays.asList(1, 2, 3, 4, 5));
-        for (Integer num: nums) {
-            System.out.println(num);
-            nums.remove(num);
-        }
+    public static void main (String[] args) throws InterruptedException {
+        Vista vista = new Vista(10, 2);
+
+//        Random rando = new Random();
+        vista.colocarAscensor(1, 5);
+        vista.colocarAscensor(1, 0);
     }
 }
