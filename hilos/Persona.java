@@ -9,6 +9,7 @@ public class Persona extends Thread {
 
     private Semaphore llamadaAscensor, salidaAscensor;
     private Edificio edificio;
+    private Ascensor ascensor;
     private int origen, destino;
     private static int autoincrement;
 
@@ -21,7 +22,7 @@ public class Persona extends Thread {
 
         generarPlantasOrigenDestino();
     }
-    
+
     @Override
     public void run() {
         try {
@@ -62,6 +63,14 @@ public class Persona extends Thread {
 
     public int getOrigen() {
         return origen;
+    }
+
+    public Ascensor getAscensor() {
+        return ascensor;
+    }
+
+    public void setAscensor(Ascensor ascensor) {
+        this.ascensor = ascensor;
     }
 
     @Override
