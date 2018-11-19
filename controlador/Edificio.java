@@ -6,12 +6,22 @@ import com.company.ui.Vista;
 
 import javax.swing.*;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.Semaphore;
 
+import static com.company.controlador.Edificio.Direccion.BAJANDO;
+import static com.company.controlador.Edificio.Direccion.PARADO;
+import static com.company.controlador.Edificio.Direccion.SUBIENDO;
+
 
 public class Edificio {
+
+    // ENUM
+    public enum Direccion {
+        SUBIENDO, BAJANDO, PARADO
+    }
 
     // ESTRUCTURAS DE DATOS
     private ArrayList<Ascensor> ascensores;
@@ -62,6 +72,10 @@ public class Edificio {
         Ascensor ascensor = persona.getAscensor();
         ascensor.getPase().acquire();
 
+        // Inserta su planta en las de destino y las ordena
+        ascensor.getPlantasDestino().add(persona.getDestino());
+        ascensor.getPlantasDestino().sort(Comparator.comparingInt(ascensor.getPlantasDestino()::get));
+
         // Actualizar los datos y la vista
         subirAlAscensorDatos(persona, ascensor);
         subirAlAscensorVista(persona, ascensor);
@@ -76,14 +90,14 @@ public class Edificio {
 
 
     /*
-    *****************************************
-    *                                       *
-    *   METODOS DE LOS HILOS ASCENSOR:      *
-    *       avisarCambioDePlanta            *
-    *       avisarSubidas                   *
-    *       avisarBajadas                   *
-    *                                       *
-    *****************************************
+     *****************************************
+     *                                       *
+     *   METODOS DE LOS HILOS ASCENSOR:      *
+     *       avisarCambioDePlanta            *
+     *       avisarSubidas                   *
+     *       avisarBajadas                   *
+     *                                       *
+     *****************************************
      */
     public void avisarCambioDePlanta(Ascensor ascensor) {
         try {
@@ -100,16 +114,64 @@ public class Edificio {
     }
 
     private void avisarSubidas(Ascensor ascensor) {
-        int numPermisos = ascensor.getPase().availablePermits();
-        Iterator<Persona> iterador = personasEsperando.get(ascensor.getPlanta()).iterator();
+//        int numPermisos = ascensor.getPase().availablePermits();
+//        Iterator<Persona> iterador = personasEsperando.get(ascensor.getPlanta()).iterator();
 
         // Mientras tenga permisos libres y quede gente, deja pasar
+//        while (numPermisos > 0 && iterador.hasNext()) {
+//            Persona persona = iterador.next();
+//            persona.setAscensor(ascensor);
+//            persona.getLlamadaAscensor().release();
+//            numPermisos--;
+//        }
+
+        Iterator<Persona> iterador = personasAComprobar(ascensor).iterator();
+        int numPermisos = ascensor.getPase().availablePermits();
+        Direccion direccionPersona;
+
         while (numPermisos > 0 && iterador.hasNext()) {
             Persona persona = iterador.next();
-            persona.setAscensor(ascensor);
-            persona.getLlamadaAscensor().release();
-            numPermisos--;
+            if (persona.getDestino() > persona.getOrigen())
+                direccionPersona = SUBIENDO;
+            else
+                direccionPersona = BAJANDO;
+
+            // Si ascensor y persona van en la misma direccion
+            if (direccionPersona.equals(ascensor.getDireccion())) {
+                persona.setAscensor(ascensor);
+                persona.getLlamadaAscensor().release();
+                numPermisos--;
+            }
         }
+    }
+
+    private ArrayList<Persona> personasAComprobar(Ascensor ascensor) {
+        ArrayList<Persona> personas = new ArrayList<>();
+
+        // Si esta parado, devuelve todas las plantas para comprobar
+        if (ascensor.getDireccion() == PARADO) {
+            for (ArrayList<Persona> listaPersonas: personasEsperando.values()) {
+                personas.addAll(listaPersonas);
+            }
+            return personas;
+        }
+
+        // Si no esta parado, devuelve las plantas entre la actual y la ultima parada
+        int primeraPlanta = ascensor.getPlanta();
+        int ultimaPlanta = ascensor.getPlantasDestino().get(ascensor.getPlantasDestino().size() - 1);
+
+        if (ascensor.getDireccion() == SUBIENDO) {
+            for (int i = primeraPlanta; i <= ultimaPlanta; i++) {
+                personas.addAll(personasEsperando.get(i));
+            }
+        }
+        else if (ascensor.getDireccion() == BAJANDO) {
+            for (int i = primeraPlanta; i >= ultimaPlanta ; i--) {
+                personas.addAll(personasEsperando.get(i));
+            }
+        }
+
+        return personas;
     }
 
     private void avisarBajadas(Ascensor ascensorActual) {
